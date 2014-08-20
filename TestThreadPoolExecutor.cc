@@ -113,6 +113,9 @@ void test_sem3()
                 sleep_sec(3);
                 assert(g == i+3);
         }
+        for (auto i = 0; i < 12; i++)
+                s.post();
+        sleep_sec(2);
 }
 
 void test_init1()
@@ -132,6 +135,7 @@ void test_init1()
         delete pool;
         lk.lock();
         son.join();
+        lk.unlock();
 }
 
 void test_init2()
@@ -153,6 +157,7 @@ void test_init2()
         delete pool;
         lk.lock();
         son.join();
+        lk.unlock();
 }
 
 void test_init3()
@@ -174,6 +179,7 @@ void test_init3()
         delete pool;
         lk.lock();
         son.join();
+        lk.unlock();
 }
 
 void test_run1()
@@ -514,15 +520,16 @@ void test_SetKeepAlive2()
 
 int main()
 {
-///*
+
         test_sem1();
         test_sem2();
         test_sem3();
 
+
         test_init1();
         test_init2();
         test_init3();
-//*/
+
         test_run1();
         test_run1_1();
         test_run2();
