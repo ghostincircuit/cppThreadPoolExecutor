@@ -518,7 +518,7 @@ void test_SetKeepAlive2()
         delete pool;
 }
 
-int main()
+int tmain()
 {
 
         test_sem1();
