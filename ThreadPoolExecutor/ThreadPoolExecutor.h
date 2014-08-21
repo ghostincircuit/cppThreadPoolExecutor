@@ -29,6 +29,10 @@ public:
                         cv.notify_all();
                 }
         }
+        /*
+          return true is no timeout happened, condition satisfied, we get a chance to move
+          return false if timeout happened
+         */
         inline bool wait(u32 sec) {
                 std::unique_lock<std::mutex> lk(lock);
                 cnt--;
