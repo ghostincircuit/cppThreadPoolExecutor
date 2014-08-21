@@ -1,4 +1,5 @@
 exe
+*.dSYM
 gen
 obj
 bin
