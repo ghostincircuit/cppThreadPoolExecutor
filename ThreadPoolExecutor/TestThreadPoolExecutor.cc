@@ -525,12 +525,12 @@ void test_factories()
         auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
         auto task =
                 [] (void *pa) {
-                int num = reinterpret_cast<int>(pa);
+                long int num = reinterpret_cast<int>(pa);
                 sleep_sec(1);
                 cout << num << endl;
                 return;
         };
-        for (auto i = 0; i < 64; i++) {
+        for (long int i = 0; i < 64; i++) {
                 single->Execute(task, (void *)i);
                 fixed->Execute(task, (void *)i);
                 unlimited->Execute(task, (void *)i);
@@ -558,12 +558,12 @@ void test_fuck()
         auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
         auto task =
                 [] (void *pa) {
-                int num = reinterpret_cast<int>(pa);
+                long int num = reinterpret_cast<int>(pa);
                 sleep_sec(1);
                 cout << num << endl;
                 return;
         };
-        for (auto i = 0; i < 1024; i++) {
+        for (long int i = 0; i < 1024; i++) {
                 unlimited->Execute(task, (void *)i);
                 const float f = 0.001;
                 sleep_sec(f);
