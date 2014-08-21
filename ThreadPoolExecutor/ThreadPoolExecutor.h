@@ -66,6 +66,25 @@ public:
                 return new ThreadPoolExecutor(0, 0xffffffff, 60);//max
         }
 
+        /*
+          minSize: minimum number of threads in the pool, if you do not use
+          PrestartAll(), then the actual number of threads in pool may be lower
+          than this value at initial stage. But the number of threads would grow
+          and after a certain period of time, the number of threads would be equal
+          or greater than minSize
+
+          maxSize: the maximum number of existing threads in the pool, the number
+          of threads in the pool would never execced this value.
+          NOTE: you should never specify a maxSize smaller than minSize and
+          maxSize must be greater than 0
+
+          alive_sec: keepAlive value of worker thread in seconds. When a thread is
+          idle for alive_sec seconds, and the current number of threads is greater
+          than minSize, then the idle thread would be killed, the size of pool would
+          shrink.
+          NOTE: if alive_sec == 0, it means there is no timeout. Idle threads would
+          always be kept alive
+         */
         ThreadPoolExecutor(u32 minSize, u32 maxSize, u32 alive_sec)
                 : min(minSize),
                   max(maxSize),
@@ -74,7 +93,10 @@ public:
                   atm(alive_sec),
                   qbd(false),
                   state(RUNNING)
-                {}
+                {
+                        assert(maxSize != 0);
+                        assert(minSize < maxSize);
+                }
         ~ThreadPoolExecutor();
         /*return false when already quitting
           it is guranteed that after this call there would be at least
