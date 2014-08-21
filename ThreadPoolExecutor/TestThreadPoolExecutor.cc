@@ -20,7 +20,7 @@ template<int sec = 2>
 void print_task(void *par)
 {
         sleep_sec(sec);
-        cout << "work done: " << (int)par << endl;
+        cout << "work done: " << (long int)par << endl;
 }
 
 struct para {
@@ -525,7 +525,7 @@ void test_factories()
         auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
         auto task =
                 [] (void *pa) {
-                long int num = reinterpret_cast<int>(pa);
+                long int num = reinterpret_cast<long int>(pa);
                 sleep_sec(1);
                 cout << num << endl;
                 return;
@@ -558,7 +558,7 @@ void test_fuck()
         auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
         auto task =
                 [] (void *pa) {
-                long int num = reinterpret_cast<int>(pa);
+                long int num = reinterpret_cast<long int>(pa);
                 sleep_sec(1);
                 cout << num << endl;
                 return;
