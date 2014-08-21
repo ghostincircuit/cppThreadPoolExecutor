@@ -575,7 +575,7 @@ void test_fuck()
 
 int tmain()
 {
-/*
+
         test_sem1();
         test_sem2();
         test_sem3();
@@ -599,7 +599,7 @@ int tmain()
         test_SetKeepAlive1();
         test_SetKeepAlive2();
         test_factories();
-*/
+
         test_fuck();
         cout << "PASS" << endl<< "PASS" << endl<< "PASS" << endl<< "PASS" << endl;
         return 0;

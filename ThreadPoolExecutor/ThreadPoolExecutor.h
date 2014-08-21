@@ -110,7 +110,7 @@ public:
                   qbd(false),
                   state(RUNNING) {
                           assert(maxSize != 0);
-                          assert(minSize < maxSize);
+                          assert(minSize <= maxSize);
                           if (minSize > maxSize)
                                   maxSize = minSize;
                           if (maxSize == 0)
@@ -190,6 +190,7 @@ public:
           use this API to add work into the threadpool request queue
          */
         bool Execute(ThreadFunction fun, void *param);
+        bool SetDestructorTimeout(u32 tm);
 private:
         std::mutex lock;
         u32 min;//minium number of threads, may not hold true for initial stage
@@ -200,6 +201,7 @@ private:
         u32 act;//current number of threads that is working(not idle)
         u32 atm;//alive timeout in seconds
         bool qbd;//quit before all works done
+        u32 dtm;//destructor AwaitTermination timeout in seconds , 0 means forever
         enum {RUNNING, QUITTING, DEAD} state;
         std::condition_variable quitCond;//used to implement AwaitTermination()
         Semaphore sem;//used to control thread activity
@@ -216,6 +218,6 @@ private:
         static void InternalWorkerFunction(ThreadPoolExecutor *pool);
         //internally used to add one thread to threadpool
         inline void Add1Thread();
-        //make sure that this is already guarded by a lock
+        //make sure that this call is already guarded by a lock
         inline void CommonCleanup();
 };

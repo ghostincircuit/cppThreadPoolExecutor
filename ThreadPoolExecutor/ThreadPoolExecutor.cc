@@ -5,8 +5,7 @@
 ThreadPoolExecutor::~ThreadPoolExecutor()
 {
         Shutdown(true);
-        AwaitTermination(0);
-        assert(cur == 0);
+        AwaitTermination(dtm);
 }
 
 void ThreadPoolExecutor::Add1Thread()
@@ -62,12 +61,15 @@ bool ThreadPoolExecutor::SetMaxPoolSize(u32 amax)
         int diff = cur - amax;
         max = amax;
         if (diff > 0) {
+                //notify extra threads to quit
                 for (auto i = 0; i < diff; i++) {
                         //possible point of optimization?
                         //multi-post
                         sem.post();
                 }
         } else if (diff < 0){
+                //we need this to make sure that when the pool size is expanded
+                //SetMaxPoolSize(), the actual number of threads would also grow
                 int maxadd = amax - cur;
                 int needadd = req_q.size() + act - cur;
                 int toadd = (maxadd > needadd) ? needadd : maxadd;
@@ -106,6 +108,9 @@ void ThreadPoolExecutor::CommonCleanup()
 {//this is already guarded by a lock
         state = QUITTING;
         //make sure that every thread can get this message
+        //should not use notify_all because that will not let those
+        //active threads know the message, because they would be waiting
+        //for semaphore value
         for (u32 i = 0; i < cur; i++)
                 sem.post();
         if (cur == 0) {
@@ -160,6 +165,15 @@ bool ThreadPoolExecutor::Execute(ThreadFunction func, void *param)
                 Add1Thread();
         }
         sem.post();
+        return true;
+}
+
+bool ThreadPoolExecutor::SetDestructorTimeout(u32 tm)
+{
+        std::lock_guard<std::mutex> lk(lock);
+        if (state != RUNNING)
+                return false;
+        dtm = tm;
         return true;
 }
 
