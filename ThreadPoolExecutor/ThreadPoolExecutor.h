@@ -9,6 +9,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
+#include <cassert>
 
 typedef unsigned int u32;
 class Semaphore {

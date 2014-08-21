@@ -42,7 +42,7 @@ u32 ThreadPoolExecutor::GetMinPoolSize()
 bool ThreadPoolExecutor::SetMinPoolSize(u32 amin)
 {
         std::lock_guard<std::mutex> lk(lock);
-        if (state != RUNNING ||\ amin > max)
+        if (state != RUNNING || amin > max)
                 return false;
         min = amin;
         return true;
