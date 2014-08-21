@@ -555,7 +555,8 @@ void test_factories()
 
 void test_fuck()
 {
-        auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
+        //auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
+        auto unlimited = ThreadPoolExecutor::NewFixedThreadPool(256);
         auto task =
                 [] (void *pa) {
                 long int num = reinterpret_cast<long int>(pa);
@@ -563,7 +564,7 @@ void test_fuck()
                 cout << num << endl;
                 return;
         };
-        for (long int i = 0; i < 1024; i++) {
+        for (long int i = 0; i < 1024*4; i++) {
                 unlimited->Execute(task, (void *)i);
                 const float f = 0.001;
                 sleep_sec(f);
