@@ -213,7 +213,7 @@ void test_run1_1()
         auto func =
                 [] (void *par) {
                 int *np = (int *)par;
-                sleep_sec(5);
+                sleep_sec(4);
                 (*np)++;
                 cout << "work" << endl;
                 return;
@@ -230,7 +230,7 @@ void test_run1_1()
         sleep_sec(1);
         r = pool->GetActiveCount();
         assert(r == 2);
-        sleep_sec(2);
+        sleep_sec(4);
         pool->Shutdown(true);//asap quit
         delete pool;
         assert(num == 2);
