@@ -46,27 +46,38 @@ public:
                 return true;
         }
 private:
+        //a semaphore can be implemented using a condition_variable and a lock
         std::mutex lock;
         std::condition_variable cv;
-        int cnt;
+        int cnt;//beging negative means some thread is waiting on the internal
+                //condition_variable, otherwise(cnt>=0) means no one is waiting
 };
 
 
 class ThreadPoolExecutor {
 public:
         typedef void (*ThreadFunction)(void *p);
-        //factory methods
+
+        //factory method: create a thread pool with a limited concurrency
         static inline ThreadPoolExecutor *NewFixedThreadPool(u32 nThreads) {
                 return new ThreadPoolExecutor(nThreads, nThreads, 0);
         }
+        //factory method: create a pool with only 1 single worker thread
         static inline ThreadPoolExecutor *NewSingleThreadExecutor() {
                 return new ThreadPoolExecutor(1, 1, 0);
         }
+        //factory method: create a pool with unlimited concurrency
+        //but usually the OS has a limit, if you add too many task
+        //too quickly, you get error from OS telling you that there
+        //is not enough resources
         static inline ThreadPoolExecutor *NewCachedThreadPool() {
                 return new ThreadPoolExecutor(0, 0xffffffff, 60);//max
         }
 
         /*
+          this is the constructor, usually you do no need to call this unless
+          the factory methods above do not fit you
+
           minSize: minimum number of threads in the pool, if you do not use
           PrestartAll(), then the actual number of threads in pool may be lower
           than this value at initial stage. But the number of threads would grow
@@ -100,25 +111,49 @@ public:
                           if (maxSize == 0)
                                   maxSize = 1;
                   }
+        /*
+          destructor, it is guranteed that when this return, all worker threads
+          asoociated with this pool are dead.
+         */
         ~ThreadPoolExecutor();
         /*return false when already quitting
           it is guranteed that after this call there would be at least
           min threads in the pool
         */
         bool PrestartAllMinThreads();
-        //void PrestartMinThread();
+        /*
+          return the number of worker threads in the pool
+         */
         u32 GetPoolSize();
+        /*
+          return the minimum number of threads that should be kept in the pool
+          only at initial stage would the actually number of threads be smaller
+          than this number
+         */
         u32 GetMinPoolSize();
         /*return false when new min is bigger than max or when pool is quitting
          */
         bool SetMinPoolSize(u32 min);
+        /*
+          return the maximum number of threads that can be kept in the pool
+          the actual number of threads should never exceed this value
+         */
         u32 GetMaxPoolSize();
-        /*return false when new min is bigger than max or when pool is quitting
+        /*
+          return false when new min is bigger than max or when pool is quitting
           NOTE:do not call this too often, otherwise there may be performance
           degradation
          */
         bool SetMaxPoolSize(u32 max);
+        /*
+          return the number of thread currently working
+         */
         u32 GetActiveCount();
+        /*
+          return KeepAliveTime, when a thread is idle for KeepAliveTime and there
+          is still no work to do and the current number of threads is larger than
+          minimum value, then the thread would be killed. The pool size would shrink
+         */
         u32 GetKeepAliveTime();
         /*
           alive_sec == 0 means infinite
@@ -130,9 +165,25 @@ public:
           i.e. all works are done
          */
         void Shutdown(bool asap=false);
-        //void ShutdownNow();
+        /*
+          querry whether the pool is shutdown(all worker threads quit), this does
+          not gurantee that all pending works are done if you use Shutdown(true)
+          to shutdown. But if you use Shutdown(false) to shutdown, it is guranteed
+          that when this returns true, all works put into the threads are also done.
+         */
         bool IsShutdown();
+        /*
+          alive_sec is the timeout for this blocking operation, 0 means forever
+          this call would block if the pool is still not shutdown(RUNNING or QUITTING).
+          NOTE that you can call this on a pool without first calling Shutdown() and
+          this call would block until someone else called Shutdown() and everything
+          is shutdown.
+         */
         bool AwaitTermination(u32 alive_sec);
+        /*
+          fun is work function.
+          use this API to add work into the threadpool request queue
+         */
         bool Execute(ThreadFunction fun, void *param);
 private:
         std::mutex lock;
@@ -147,15 +198,19 @@ private:
         enum {RUNNING, QUITTING, DEAD} state;
         std::condition_variable quitCond;//used to implement AwaitTermination()
         Semaphore sem;//used to control thread activity
-
+        //this struct is used to save pending work and parameter
         struct Workload {
                 Workload() {}
                 Workload(ThreadFunction f, void *p) : work(f), param(p) {}
                 ThreadFunction work;
                 void *param;
         };
+        //request list
         std::list<Workload> req_q;
+        //worker thread function
         static void InternalWorkerFunction(ThreadPoolExecutor *pool);
+        //internally used to add one thread to threadpool
         inline void Add1Thread();
+        //make sure that this is already guarded by a lock
         inline void CommonCleanup();
 };
