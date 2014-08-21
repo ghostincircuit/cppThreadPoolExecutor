@@ -92,11 +92,14 @@ public:
                   act(0),
                   atm(alive_sec),
                   qbd(false),
-                  state(RUNNING)
-                {
-                        assert(maxSize != 0);
-                        assert(minSize < maxSize);
-                }
+                  state(RUNNING) {
+                          assert(maxSize != 0);
+                          assert(minSize < maxSize);
+                          if (minSize > maxSize)
+                                  maxSize = minSize;
+                          if (maxSize == 0)
+                                  maxSize = 1;
+                  }
         ~ThreadPoolExecutor();
         /*return false when already quitting
           it is guranteed that after this call there would be at least
@@ -118,11 +121,13 @@ public:
         u32 GetActiveCount();
         u32 GetKeepAliveTime();
         /*
-          0 means infinite
+          alive_sec == 0 means infinite
          */
         bool SetKeepAliveTime(u32 alive_sec);
         /*
           asap(as soon as possible) measn quit even if work queue is not empty
+          otherwise pool threads would quit only when current work queue is empty
+          i.e. all works are done
          */
         void Shutdown(bool asap=false);
         //void ShutdownNow();
@@ -131,21 +136,19 @@ public:
         bool Execute(ThreadFunction fun, void *param);
 private:
         std::mutex lock;
-        u32 min;
-        u32 max;
-        u32 cur;
-        u32 act;//current active
+        u32 min;//minium number of threads, may not hold true for initial stage
+                //when using on demand(not calling PrestartAllMinThreads()
+        u32 max;//maximum nubmer of threads, this never would never at any circumstance
+                //be exceeded
+        u32 cur;//current number of threads
+        u32 act;//current number of threads that is working(not idle)
         u32 atm;//alive timeout in seconds
         bool qbd;//quit before all works done
         enum {RUNNING, QUITTING, DEAD} state;
-        std::condition_variable quitCond;
-        Semaphore sem;
+        std::condition_variable quitCond;//used to implement AwaitTermination()
+        Semaphore sem;//used to control thread activity
 
         struct Workload {
-/*
-                Workload(ThreadFunction f, void *p)
-                : work(f), param(p) {}
-*/
                 Workload() {}
                 Workload(ThreadFunction f, void *p) : work(f), param(p) {}
                 ThreadFunction work;
