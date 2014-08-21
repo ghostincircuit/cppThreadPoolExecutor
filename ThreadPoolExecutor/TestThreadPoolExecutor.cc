@@ -230,7 +230,6 @@ void test_run1_1()
         sleep_sec(1);
         r = pool->GetActiveCount();
         assert(r == 2);
-        sleep_sec(4);
         pool->Shutdown(true);//asap quit
         delete pool;
         assert(num == 2);
@@ -521,7 +520,7 @@ void test_SetKeepAlive2()
 void test_factories()
 {
         auto single = ThreadPoolExecutor::NewSingleThreadExecutor();
-        auto fixed = ThreadPoolExecutor::NewFixedThreadPool(32);
+        auto fixed = ThreadPoolExecutor::NewFixedThreadPool(16);
         auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
         auto task =
                 [] (void *pa) {
@@ -530,7 +529,7 @@ void test_factories()
                 cout << num << endl;
                 return;
         };
-        for (long int i = 0; i < 64; i++) {
+        for (long int i = 0; i < 32; i++) {
                 single->Execute(task, (void *)i);
                 fixed->Execute(task, (void *)i);
                 unlimited->Execute(task, (void *)i);
