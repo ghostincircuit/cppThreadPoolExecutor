@@ -55,6 +55,17 @@ private:
 class ThreadPoolExecutor {
 public:
         typedef void (*ThreadFunction)(void *p);
+        //factory methods
+        static inline ThreadPoolExecutor *NewFixedThreadPool(u32 nThreads) {
+                return new ThreadPoolExecutor(nThreads, nThreads, 0);
+        }
+        static inline ThreadPoolExecutor *NewSingleThreadExecutor() {
+                return new ThreadPoolExecutor(1, 1, 0);
+        }
+        static inline ThreadPoolExecutor *NewCachedThreadPool() {
+                return new ThreadPoolExecutor(0, 0xffffffff, 60);//max
+        }
+
         ThreadPoolExecutor(u32 minSize, u32 maxSize, u32 alive_sec)
                 : min(minSize),
                   max(maxSize),

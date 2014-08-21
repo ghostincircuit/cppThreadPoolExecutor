@@ -518,9 +518,63 @@ void test_SetKeepAlive2()
         delete pool;
 }
 
+void test_factories()
+{
+        auto single = ThreadPoolExecutor::NewSingleThreadExecutor();
+        auto fixed = ThreadPoolExecutor::NewFixedThreadPool(32);
+        auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
+        auto task =
+                [] (void *pa) {
+                int num = reinterpret_cast<int>(pa);
+                sleep_sec(1);
+                cout << num << endl;
+                return;
+        };
+        for (auto i = 0; i < 64; i++) {
+                single->Execute(task, (void *)i);
+                fixed->Execute(task, (void *)i);
+                unlimited->Execute(task, (void *)i);
+        }
+        single->Shutdown(false);
+        fixed->Shutdown(false);
+        unlimited->Shutdown(false);
+        while(1) {
+                auto r1 = single->IsShutdown();
+                auto r2 = fixed->IsShutdown();
+                auto r3 = unlimited->IsShutdown();
+                cout << r1 << " " << r2 << " " << r3 << endl;
+                if (r1 && r2 && r3)
+                        break;
+                else
+                        sleep_sec(2);
+        }
+        delete single;
+        delete fixed;
+        delete unlimited;
+}
+
+void test_fuck()
+{
+        auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
+        auto task =
+                [] (void *pa) {
+                int num = reinterpret_cast<int>(pa);
+                sleep_sec(1);
+                cout << num << endl;
+                return;
+        };
+        for (auto i = 0; i < 1024; i++) {
+                unlimited->Execute(task, (void *)i);
+                const float f = 0.001;
+                sleep_sec(f);
+        }
+        unlimited->Shutdown(false);
+        delete unlimited;
+}
+
 int tmain()
 {
-
+/*
         test_sem1();
         test_sem2();
         test_sem3();
@@ -543,7 +597,9 @@ int tmain()
         test_SetMaxPoolSize3();
         test_SetKeepAlive1();
         test_SetKeepAlive2();
-
+        test_factories();
+*/
+        test_fuck();
         cout << "PASS" << endl<< "PASS" << endl<< "PASS" << endl<< "PASS" << endl;
         return 0;
 }
