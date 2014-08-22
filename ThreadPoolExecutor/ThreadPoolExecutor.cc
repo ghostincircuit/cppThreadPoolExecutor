@@ -152,12 +152,12 @@ bool ThreadPoolExecutor::AwaitTermination(u32 alive_sec)
         }
 }
 
-bool ThreadPoolExecutor::Execute(ThreadFunction func, void *param)
+bool ThreadPoolExecutor::Execute(const std::function<void()>& task)
 {
         std::lock_guard<std::mutex> lk(lock);
         if (state != RUNNING)
                 return false;
-        req_q.emplace_back(func, param);
+        req_q.emplace_back(task);
         assert(cur >= act);
         u32 diff = cur - act;
         bool nmt = (diff < req_q.size());//need more threads
@@ -181,7 +181,7 @@ void ThreadPoolExecutor::InternalWorkerFunction(ThreadPoolExecutor *self)
 {
         enum {WAIT, WORK, SUICIDE} todo = WAIT;
         while (1) {
-                Workload work;
+                std::function<void()> work;
                 //return false means we are not freed, we timeouted
                 bool timeout = !self->sem.wait(self->atm);
                 {
@@ -210,6 +210,7 @@ void ThreadPoolExecutor::InternalWorkerFunction(ThreadPoolExecutor *self)
                                 work = self->req_q.front();
                                 self->req_q.pop_front();
                                 self->act++;
+                                assert(self->act != 0);
                         } else if (exceed_limit || quite_idle || quick_quit || final_quit) {
                                 //SUICIDE
                                 self->cur--;
@@ -224,10 +225,11 @@ void ThreadPoolExecutor::InternalWorkerFunction(ThreadPoolExecutor *self)
                         }
                 }
                 if (todo == WORK) {
-                        (*work.work)(work.param);
+                        work();
                         {
                                 std::lock_guard<std::mutex> lk(self->lock);
                                 self->act--;
+                                assert(self->act >= 0);
                         }
                 } else if (todo == SUICIDE)
                         return;
