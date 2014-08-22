@@ -551,7 +551,7 @@ void test_factories()
                 if (r1 && r2 && r3)
                         break;
                 else
-  
+
                       sleep_sec(2);
         }
         delete single;
@@ -605,9 +605,36 @@ void test_functional()
         std::function<void()> fu = std::bind(&Obj::mf2, &obj);
         for (auto i = 0; i < 4; i++)
                 unlimited->Execute(fu);
-        
+
         unlimited->Shutdown(false);
         delete unlimited;
+}
+
+void test_idle()
+{//test that min value really have an effect on shrinking
+        auto pool = new ThreadPoolExecutor(4, 6, 1);
+        std::mutex lock;
+        int val = 0;
+        auto func =
+                [&] () {
+                lock.lock();
+                val++;
+                lock.unlock();
+
+        };
+        for (int i = 0; i < 8; i++) {
+                pool->Execute(func);
+                const float f = 0.001;
+                sleep_sec(f);
+        }
+
+        while (val != 8)
+                sleep_sec(1);
+        sleep_sec(3);
+        auto r = pool->GetPoolSize();
+        assert(r == 4);
+        pool->Shutdown(false);
+        delete pool;
 }
 
 int tmain()
@@ -644,7 +671,10 @@ int tmain()
 
                 test_fuck();
                 test_functional();
+                test_idle();
         }
+
+
         cout << "PASS" << endl<< "PASS" << endl<< "PASS" << endl<< "PASS" << endl;
         return 0;
 }

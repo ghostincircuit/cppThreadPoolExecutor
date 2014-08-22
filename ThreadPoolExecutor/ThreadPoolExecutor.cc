@@ -202,7 +202,7 @@ void ThreadPoolExecutor::InternalWorkerFunction(ThreadPoolExecutor *self)
                         bool list_empty = self->req_q.empty();
                         bool exceed_limit = (self->cur > self->max);
                         bool quick_quit = (self->state == QUITTING) && self->qbd;
-                        bool quite_idle = timeout && list_empty;
+                        bool quite_idle = timeout && list_empty && self->cur > self->min;
                         bool final_quit = (self->state == QUITTING) && list_empty;
                         if (!list_empty && !exceed_limit && !quick_quit) {
                                 //WORK
