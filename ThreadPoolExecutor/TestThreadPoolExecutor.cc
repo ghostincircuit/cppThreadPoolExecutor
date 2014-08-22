@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <cassert>
+#include <functional>
 using namespace std;
 
 #include "ThreadPoolExecutor.h"
@@ -17,10 +18,10 @@ inline void sleep_sec(float sec)
 }
 
 template<int sec = 2>
-void print_task(void *par)
+void print_task(int par)
 {
         sleep_sec(sec);
-        cout << "work done: " << (long int)par << endl;
+        cout << "work done: " << par << endl;
 }
 
 struct para {
@@ -186,7 +187,7 @@ void test_run1()
 {//one work one work one work, non-asap quit
         cout << "============================ " << __func__ << " ==============" << endl;
         auto func =
-                [] (void *par) {
+                [] (int *par) {
                 int *np = (int *)par;
                 sleep_sec(1);
                 (*np)++;
@@ -199,7 +200,7 @@ void test_run1()
 
         int num = 0;
         for (auto i = 0; i < 4; i++) {
-                pool->Execute(func, &num);
+                pool->Execute(std::bind(func, &num));
                 sleep_sec(2);
         }
         pool->Shutdown(false);//non-asap quit
@@ -211,7 +212,7 @@ void test_run1_1()
 {//try asap quit
         cout << "============================ " << __func__ << " ==============" << endl;
         auto func =
-                [] (void *par) {
+                [] (int *par) {
                 int *np = (int *)par;
                 sleep_sec(4);
                 (*np)++;
@@ -223,7 +224,7 @@ void test_run1_1()
 
         int num = 0;
         for (auto i = 0; i < 4; i++) {
-                pool->Execute(func, &num);
+                pool->Execute(std::bind(func, &num));
         }
         auto r = pool->GetPoolSize();
         assert(r == 2);
@@ -248,7 +249,7 @@ void test_run2()
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 pa[i].lock = &mux;
                 pa[i].num = &val;
-                pool->Execute(adder_task<8>, (void *)&pa[i]);
+                pool->Execute(std::bind(&adder_task<8>, (void *)&pa[i]));
                 cout << "add work: " << i << endl;
         }
         delete pool;
@@ -269,7 +270,7 @@ void test_run2_1()
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 pa[i].lock = &mux;
                 pa[i].num = &val;
-                pool->Execute(adder_task, (void *)&pa[i]);
+                pool->Execute(std::bind(&adder_task, (void *)&pa[i]));
                 cout << "add work: " << i << endl;
         }
 
@@ -296,7 +297,7 @@ void test_run3()
                         pa[i].lock = &glock;
                         pa[i].num = &val;
                         sleep_sec(f);
-                        pool->Execute(adder_task<6>, &pa[i]);
+                        pool->Execute(std::bind(&adder_task<6>, &pa[i]));
                 }
         };
         auto adder1 =
@@ -305,7 +306,7 @@ void test_run3()
                         pb[i].lock = &glock;
                         pb[i].num = &val;
                         sleep_sec(f);
-                        pool->Execute(adder_task<6>, &pb[i]);
+                        pool->Execute(std::bind(&adder_task<6>, &pb[i]));
                 }
         };
         thread s0(adder0);
@@ -336,7 +337,7 @@ void test_run3_1()
                         pa[i].lock = &glock;
                         pa[i].num = &val;
                         sleep_sec(f);
-                        pool->Execute(adder_task<6>, &pa[i]);
+                        pool->Execute(std::bind(&adder_task<6>, &pa[i]));
                 }
         };
         auto adder1 =
@@ -345,7 +346,7 @@ void test_run3_1()
                         pb[i].lock = &glock;
                         pb[i].num = &val;
                         sleep_sec(f);
-                        pool->Execute(adder_task<6>, &pb[i]);
+                        pool->Execute(std::bind(&adder_task<6>, &pb[i]));
                 }
         };
         thread s0(adder0);
@@ -365,29 +366,30 @@ void test_run4()
         cout << "============================ " << __func__ << " ==============" << endl;
         auto pool = new ThreadPoolExecutor(4, 8, 0);
         assert(pool->GetPoolSize() == 0);
+        auto lam = [&] () {pool->Execute(std::bind(&print_task<4>, 0));};
 
-        pool->Execute(print_task<4>, 0);
+        lam();
         assert(pool->GetPoolSize() == 1);
 
-        pool->Execute(print_task<4>, 0);
+        lam();
         assert(pool->GetPoolSize() == 2);
 
-        pool->Execute(print_task<4>, 0);
+        lam();
         assert(pool->GetPoolSize() == 3);
 
-        pool->Execute(print_task<4>, 0);
+        lam();
         assert(pool->GetPoolSize() == 4);
 
-        pool->Execute(print_task<4>, 0);
+        lam();
         assert(pool->GetPoolSize() == 5);
 
         sleep_sec(6);
         assert(pool->GetPoolSize() == 5);
 
-        pool->Execute(print_task<4>, 0);
+        lam();
         assert(pool->GetPoolSize() == 5);
 
-        pool->Execute(print_task<4>, 0);
+        lam();
         assert(pool->GetPoolSize() == 5);
 
         delete pool;
@@ -416,7 +418,7 @@ void test_SetMaxPoolSize2()
         cout << "============================ " << __func__ << " ==============" << endl;
         auto pool = new ThreadPoolExecutor(2, 4, 0);
         for (int i = 0; i < 6; i++) {
-                pool->Execute(print_task<4>, (void *)i);
+                pool->Execute(std::bind(&print_task<4>, i));
         }
 
         assert(pool->GetPoolSize() == 4);
@@ -446,14 +448,14 @@ void test_SetMaxPoolSize3()
                 [&] () {
                 for (auto i = 0; i < 32; i++) {
                         sleep_sec(f);
-                        pool->Execute(adder_task<1>, &param);
+                        pool->Execute(std::bind(&adder_task<1>, &param));
                 }
         };
         auto adder1 =
                 [&] () {
                 for (auto i = 0; i < 32; i++) {
                         sleep_sec(f);
-                        pool->Execute(adder_task<1>, &param);
+                        pool->Execute(std::bind(&adder_task<1>, &param));
                 }
         };
         thread s0(adder0);
@@ -485,7 +487,7 @@ void test_SetKeepAlive1()
         auto pool = new ThreadPoolExecutor(0, 4, 1);
         pool->PrestartAllMinThreads();
         for (auto i = 0; i < 4; i++)
-                pool->Execute(print_task<1>, (void *)i);
+                pool->Execute(std::bind(&print_task<1>, i));
         auto r = 0;
         r = pool->GetPoolSize();
         assert(r == 4);
@@ -502,7 +504,7 @@ void test_SetKeepAlive2()
         auto pool = new ThreadPoolExecutor(0, 4, 2);
         pool->PrestartAllMinThreads();
         for (auto i = 0; i < 4; i++)
-                pool->Execute(print_task<1>, (void *)i);
+                pool->Execute(std::bind(&print_task<1>, i));
         auto r = 0;
         r = pool->GetPoolSize();
         assert(r == 4);
@@ -511,7 +513,8 @@ void test_SetKeepAlive2()
         r = pool->GetPoolSize();
         assert(r == 4);
         pool->SetKeepAliveTime(1);//1 second
-        sleep_sec(2);
+        float f = 3.5;
+        sleep_sec(f);
         r = pool->GetPoolSize();
         assert(r == 0);
         delete pool;
@@ -523,16 +526,16 @@ void test_factories()
         auto fixed = ThreadPoolExecutor::NewFixedThreadPool(16);
         auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
         auto task =
-                [] (void *pa) {
-                long int num = reinterpret_cast<long int>(pa);
+                [] (int pa) {
                 sleep_sec(1);
-                cout << num << endl;
+                cout << pa << endl;
                 return;
         };
+        for (int i = 0; i < 8; i++)
+                single->Execute(std::bind(task, i));
         for (long int i = 0; i < 32; i++) {
-                single->Execute(task, (void *)i);
-                fixed->Execute(task, (void *)i);
-                unlimited->Execute(task, (void *)i);
+                fixed->Execute(std::bind(task, i));
+                unlimited->Execute(std::bind(task, i));
         }
         single->Shutdown(false);
         fixed->Shutdown(false);
@@ -545,7 +548,8 @@ void test_factories()
                 if (r1 && r2 && r3)
                         break;
                 else
-                        sleep_sec(2);
+  
+                      sleep_sec(2);
         }
         delete single;
         delete fixed;
@@ -557,14 +561,13 @@ void test_fuck()
         //auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
         auto unlimited = ThreadPoolExecutor::NewFixedThreadPool(256);
         auto task =
-                [] (void *pa) {
-                long int num = reinterpret_cast<long int>(pa);
+                [] (int pa) {
                 sleep_sec(1);
-                cout << num << endl;
+                cout << pa << endl;
                 return;
         };
         for (long int i = 0; i < 1024*4; i++) {
-                unlimited->Execute(task, (void *)i);
+                unlimited->Execute(std::bind(task, i));
                 const float f = 0.001;
                 sleep_sec(f);
         }
@@ -572,9 +575,38 @@ void test_fuck()
         delete unlimited;
 }
 
+void test_functional()
+{
+        struct Obj {
+                Obj(int a) : m(a) {}
+                int m;
+                void mf1(int a0) {
+                        cout << a0 << endl;
+                }
+                void mf2() {
+                        cout << m << endl;
+                }
+        };
+        Obj obj(345);
+        auto unlimited = ThreadPoolExecutor::NewFixedThreadPool(2);
+        for (int i = 0; i < 4; i++) {
+                std::function<void()> fu =
+                        std::bind(&Obj::mf1, &obj, i);
+                unlimited->Execute(fu);
+                const float f = 0.001;
+                sleep_sec(f);
+        }
+        std::function<void()> fu = std::bind(&Obj::mf2, &obj);
+        for (auto i = 0; i < 4; i++)
+                unlimited->Execute(fu);
+        
+        unlimited->Shutdown(false);
+        delete unlimited;
+}
+
 int tmain()
 {
-
+/*
         test_sem1();
         test_sem2();
         test_sem3();
@@ -591,15 +623,18 @@ int tmain()
         test_run4();
         test_run3();
         test_run3_1();
-
+*/
         test_SetMaxPoolSize1();
         test_SetMaxPoolSize2();
         test_SetMaxPoolSize3();
         test_SetKeepAlive1();
+
         test_SetKeepAlive2();
         test_factories();
 
+
         test_fuck();
+        test_functional();
         cout << "PASS" << endl<< "PASS" << endl<< "PASS" << endl<< "PASS" << endl;
         return 0;
 }

@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <chrono>
 #include <cassert>
+#include <functional>
 
 typedef unsigned int u32;
 class Semaphore {
@@ -61,8 +62,6 @@ private:
 
 class ThreadPoolExecutor {
 public:
-        typedef void (*ThreadFunction)(void *p);
-
         //factory method: create a thread pool with a limited concurrency
         static inline ThreadPoolExecutor *NewFixedThreadPool(u32 nThreads) {
                 return new ThreadPoolExecutor(nThreads, nThreads, 0);
@@ -189,7 +188,7 @@ public:
           fun is work function.
           use this API to add work into the threadpool request queue
          */
-        bool Execute(ThreadFunction fun, void *param);
+        bool Execute(const std::function<void()> &task);
         bool SetDestructorTimeout(u32 tm);
 private:
         std::mutex lock;
@@ -205,15 +204,8 @@ private:
         enum {RUNNING, QUITTING, DEAD} state;
         std::condition_variable quitCond;//used to implement AwaitTermination()
         Semaphore sem;//used to control thread activity
-        //this struct is used to save pending work and parameter
-        struct Workload {
-                Workload() {}
-                Workload(ThreadFunction f, void *p) : work(f), param(p) {}
-                ThreadFunction work;
-                void *param;
-        };
         //request list
-        std::list<Workload> req_q;
+        std::list<std::function<void()> > req_q;
         //worker thread function
         static void InternalWorkerFunction(ThreadPoolExecutor *pool);
         //internally used to add one thread to threadpool
