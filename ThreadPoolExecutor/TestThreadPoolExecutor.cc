@@ -559,20 +559,23 @@ void test_factories()
 void test_fuck()
 {
         //auto unlimited = ThreadPoolExecutor::NewCachedThreadPool();
-        auto unlimited = ThreadPoolExecutor::NewFixedThreadPool(256);
+        auto unlimited = ThreadPoolExecutor::NewFixedThreadPool(128);
+        std::mutex gl;
+        int val = 0;
+        const int N = 1024*16*64;
         auto task =
-                [] (int pa) {
-                sleep_sec(1);
-                cout << pa << endl;
+                [&] () {
+                gl.lock();
+                val++;
+                gl.unlock();
                 return;
         };
-        for (long int i = 0; i < 1024*4; i++) {
-                unlimited->Execute(std::bind(task, i));
-                const float f = 0.001;
-                sleep_sec(f);
+        for (long int i = 0; i < N; i++) {
+                unlimited->Execute(task);
         }
         unlimited->Shutdown(false);
         delete unlimited;
+        assert(val == N);
 }
 
 void test_functional()
@@ -623,13 +626,16 @@ int tmain()
         test_run4();
         test_run3();
         test_run3_1();
-*/
+
+
         test_SetMaxPoolSize1();
         test_SetMaxPoolSize2();
+
         test_SetMaxPoolSize3();
         test_SetKeepAlive1();
 
         test_SetKeepAlive2();
+*/
         test_factories();
 
 

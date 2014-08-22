@@ -107,6 +107,7 @@ public:
                   act(0),
                   atm(alive_sec),
                   qbd(false),
+                  dtm(0),
                   state(RUNNING) {
                           assert(maxSize != 0);
                           assert(minSize <= maxSize);
