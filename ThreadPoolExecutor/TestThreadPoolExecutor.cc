@@ -211,11 +211,14 @@ void test_run1()
 void test_run1_1()
 {//try asap quit
         cout << "============================ " << __func__ << " ==============" << endl;
+        std::mutex lk;
         auto func =
-                [] (int *par) {
+                [&] (int *par) {
                 int *np = (int *)par;
-                sleep_sec(4);
+                sleep_sec(8);
+                lk.lock();
                 (*np)++;
+                lk.unlock();
                 cout << "work" << endl;
                 return;
         };
@@ -270,7 +273,7 @@ void test_run2_1()
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 pa[i].lock = &mux;
                 pa[i].num = &val;
-                pool->Execute(std::bind(&adder_task, (void *)&pa[i]));
+                pool->Execute(std::bind(&adder_task<4>, (void *)&pa[i]));
                 cout << "add work: " << i << endl;
         }
 
@@ -609,38 +612,39 @@ void test_functional()
 
 int tmain()
 {
-/*
-        test_sem1();
-        test_sem2();
-        test_sem3();
+        for (auto i = 0; i < 32; i++) {
+                test_sem1();
+                test_sem2();
+                test_sem3();
 
 
-        test_init1();
-        test_init2();
-        test_init3();
+                test_init1();
+                test_init2();
+                test_init3();
 
-        test_run1();
-        test_run1_1();
-        test_run2();
-        test_run2_1();
-        test_run4();
-        test_run3();
-        test_run3_1();
-
-
-        test_SetMaxPoolSize1();
-        test_SetMaxPoolSize2();
-
-        test_SetMaxPoolSize3();
-        test_SetKeepAlive1();
-
-        test_SetKeepAlive2();
-*/
-        test_factories();
+                test_run1();
+                test_run1_1();
+                test_run2();
+                test_run2_1();
+                test_run4();
+                test_run3();
+                test_run3_1();
 
 
-        test_fuck();
-        test_functional();
+                test_SetMaxPoolSize1();
+                test_SetMaxPoolSize2();
+
+                test_SetMaxPoolSize3();
+                test_SetKeepAlive1();
+
+                test_SetKeepAlive2();
+
+                test_factories();
+
+
+                test_fuck();
+                test_functional();
+        }
         cout << "PASS" << endl<< "PASS" << endl<< "PASS" << endl<< "PASS" << endl;
         return 0;
 }
